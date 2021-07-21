@@ -24,10 +24,8 @@ public class APIService {
         switch (option) {
             case 1:
                 return fetchStoriesFeature(scanner);
-            break;
-            case 0:
+            default:
                 return exitApp();
-            break;
         }
     }
 
