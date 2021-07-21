@@ -17,19 +17,18 @@ public class APIService {
 
     private final String HEADER = "*************";
 
-    public void launchApp() {
+    public List<String> launchApp() {
         Scanner scanner = new Scanner(System.in);
         showMenu();
         int option = scanner.nextInt();
         switch (option) {
             case 1:
-                fetchStoriesFeature(scanner);
-                break;
+                return fetchStoriesFeature(scanner);
+            break;
             case 0:
-                exitApp();
-                break;
+                return exitApp();
+            break;
         }
-
     }
 
     private void showMenu() {
@@ -40,7 +39,9 @@ public class APIService {
         System.out.println();
     }
 
-    private void fetchStoriesFeature(Scanner scanner) {
+    private List<String> fetchStoriesFeature(Scanner scanner) {
+        List<String> output = new ArrayList<>();
+
         System.out.println(HEADER + "\tFETCH STORIES\t" + HEADER);
         System.out.println("HOW MANY STORIES WOULD YOU LIKE TO FETCH? (MAXIMUM 50)");
         System.out.println();
@@ -49,20 +50,21 @@ public class APIService {
 
         if (storiesToFetch > 0 && storiesToFetch < 50) {
             System.out.println("HERE ARE THE TOP " + storiesToFetch + " STORIES");
-            fetch_X_stories(storiesToFetch);
+            try {
+                output = fetch_X_stories(storiesToFetch);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         } else {
             System.out.println("INCORRECT INPUT!");
             fetchStoriesFeature(scanner);
         }
+
+        return output;
     }
 
-    private void exitApp() {
-        System.exit(0);
-    }
-
-    private void fetch_X_stories(int storiesToFetch) {
-        // String regex = "(\\[(\\d{8},){" + storiesToFetch + "})";
-        // Pattern pattern = Pattern.compile(regex);
+    private List<String> fetch_X_stories(int storiesToFetch) throws IOException {
+        List<String> output = new ArrayList<>();
         String newAndTopStoriesURL = "https://hacker-news.firebaseio.com/v0/topstories.json";
         OkHttpClient client = new OkHttpClient();
 
@@ -71,40 +73,33 @@ public class APIService {
                 .get()
                 .build();
 
-        try {
-            Response response = client.newCall(request).execute();
-            String responseBody = response.body().string();
+        Response response = client.newCall(request).execute();
+        String responseBody = response.body().string();
 
-            // String jsonBody = new Gson().toJson(responseBody);
-            // Matcher matcher = pattern.matcher(responseBody);
-            // JsonObject jsonObject = new JsonParser().parse(jsonBody).getAsJsonObject();
-
-            List<String> stories = fetchStories(responseBody, storiesToFetch);
-            for (String s : stories) {
-                fetchStory(s);
-            }
-            // System.out.println(Arrays.asList(fetchStories(responseBody, storiesToFetch)));
-
-        } catch (IOException e) {
-            e.printStackTrace();
+        List<String> storyIDs = fetchStoryIDs(responseBody, storiesToFetch);
+        for (String s : storyIDs) {
+            output.add(fetchStory(s));
         }
+
+        return output;
     }
 
-    private List<String> fetchStories(String body, int storiesToFetch) {
-        List<String> result = new ArrayList<>();
+    private List<String> fetchStoryIDs(String body, int storiesToFetch) {
+        List<String> storyIDs = new ArrayList<>();
 
         body = body.replace("{\"mode\":\"full\",\"isActive\":false}", "");
         body = body.replace("[", "");
+        body = body.replace("]", "");
 
         String[] split = body.split(",");
         for (int i = 0; i < storiesToFetch; i++) {
-            result.add(split[i]);
+            storyIDs.add(split[i]);
         }
 
-        return result;
+        return storyIDs;
     }
 
-    private void fetchStory(String storyId) {
+    private String fetchStory(String storyId) throws IOException {
         OkHttpClient client = new OkHttpClient();
         String storyByIdURL = "https://hacker-news.firebaseio.com/v0/item/" + storyId + ".json";
 
@@ -113,14 +108,16 @@ public class APIService {
                 .get()
                 .build();
 
-        try {
-            Response story = client.newCall(storyRequest).execute();
-            String responseBody = story.body().string();
-            Gson gson = new GsonBuilder().setPrettyPrinting().create();
-            String prettyJSON = gson.toJson(responseBody);
-            System.out.println(prettyJSON);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        Response story = client.newCall(storyRequest).execute();
+        String responseBody = story.body().string();
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+
+        return gson.toJson(responseBody);
+    }
+
+    private List<String> exitApp() {
+        List<String> output = new ArrayList<>();
+        output.add("EXIT");
+        return output;
     }
 }
